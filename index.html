@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proyecto Métodos Numéricos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Barra de Navegación -->
+    <nav class="navbar">
+        <div class="logo">NuméricosApp</div>
+        <ul class="nav-links">
+            <li><a href="#" class="nav-btn active" data-target="inicio">Inicio</a></li>
+            <li><a href="#" class="nav-btn" data-target="calculadora">Calculadora</a></li>
+            <li><a href="#" class="nav-btn" data-target="trabajos">Trabajos de Clase</a></li>
+        </ul>
+    </nav>
+
+    <!-- Contenedor Principal de Capas -->
+    <main class="content-container">
+
+        <!-- Capa 1: Inicio -->
+        <section id="inicio" class="layer active-layer">
+            <h1>Bienvenidos a Nuestro Proyecto</h1>
+            <p class="summary">
+                Esta plataforma está dedicada a la aplicación práctica de los métodos numéricos. 
+                Aquí exploramos algoritmos iterativos para resolver problemas matemáticos complejos mediante código interactivo.
+            </p>
+            <div class="video-container">
+                <h3>Video de Presentación</h3>
+                <iframe width="560" height="315" src="https://youtube.com" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </section>
+
+        <!-- Capa 2: Calculadora Numérica Libre -->
+        <section id="calculadora" class="layer">
+            <h2>Calculadora Numérica Multimétodo</h2>
+            <p>Ingresa una ecuación en términos de <strong>x</strong>. Ejemplos válidos: <code>x^3 - x - 2</code> o <code>x^2 - 4</code></p>
+            
+            <div class="calc-form">
+                <div class="input-group">
+                    <label>Selecciona el Método Numérico:</label>
+                    <select id="calcMetodo">
+                        <option value="biseccion">Método de Bisección</option>
+                        <option value="punto_fijo">Método de Punto Fijo</option>
+                        <option value="newton">Método de Newton-Raphson</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Función matemática:</label>
+                    <input type="text" id="inputFuncion" value="x^3 - x - 2">
+                </div>
+                <div class="input-group">
+                    <label id="labelInputA">Intervalo A (Inferior):</label>
+                    <input type="number" id="inputA" value="1" step="0.1">
+                </div>
+                <div class="input-group" id="containerInputB">
+                    <label>Intervalo B (Superior):</label>
+                    <input type="number" id="inputB" value="2" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Tolerancia (Error Máximo):</label>
+                    <input type="number" id="inputTol" value="0.001" step="0.0001">
+                </div>
+                <div class="input-group">
+                    <label>Límite de Iteraciones:</label>
+                    <input type="number" id="inputIter" value="50">
+                </div>
+                <button id="btnCalcular">Calcular Raíz Paso a Paso</button>
+            </div>
+
+            <div id="resultadoCalc" class="result-box tabla-contenedor"></div>
+        </section>
+
+        <!-- Capa 3: Trabajos de Clase -->
+        <section id="trabajos" class="layer">
+            <h2>Trabajos de Clase: Ejercicios Prácticos</h2>
+            <p>Los siguientes problemas han sido precargados de forma automática empleando el mismo motor matemático unificado:</p>
+            
+            <div class="ejercicio-automatico" data-id="1" data-nombre="Tarea 1: Análisis de Fluidos" data-metodo="biseccion" data-ecuacion="x^3 - x - 2" data-a="1" data-b="2" data-tol="0.001" data-iter="25"></div>
+            <div class="ejercicio-automatico" data-id="2" data-nombre="Tarea 2: Despeje Alternativo g(x)" data-metodo="punto_fijo" data-ecuacion="sqrt(x + 2)" data-a="1" data-tol="0.001" data-iter="30"></div>
+            <div class="ejercicio-automatico" data-id="3" data-nombre="Tarea 3: Optimización Estructural" data-metodo="newton" data-ecuacion="x^2 - 4" data-a="3" data-tol="0.0001" data-iter="15"></div>
+        </section>
+
+    </main>
+
+    <!-- Pie de Página -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="team-members">
+                <h3>Integrantes del Equipo</h3>
+                <ul>
+                    <li>Poblete Garcia Jorge Andres</li>
+                    <li>Gonzalez Morales Leonardo</li>
+                    <li>Martínez Pérez Julio Cesar</li>
+                    <li>Sosa Flores krishna BHAKTI</li>
+                </ul>
+            </div>
+            <div class="social-media">
+                <h3>Redes Sociales</h3>
+                <a href="#" target="_blank">GitHub</a> | 
+                <a href="#" target="_blank">YouTube</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 Métodos Numéricos - Todos los derechos reservados.
+        </div>
+    </footer>
+
+    <!-- Cargamos el script al final del body sin atributos raros -->
+    <script src="script.js"></script>
+</body>
+</html>

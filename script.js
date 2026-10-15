@@ -26,6 +26,7 @@ function evaluarFuncion(expresion, xValor) {
     str = str.replace(/tan\(/g, 'Math.tan(');
     str = str.replace(/ln\(/g, 'Math.log(');
     str = str.replace(/sqrt\(([^)]+)\)/g, 'Math.sqrt(\$1)');
+    str = str.replace(/tanh\(/g, 'Math.tanh(');
     
     // 5. Esto remplaza todos los '^' restantes por el operador de potencia nativo '**'
     str = str.replace(/\^/g, '**');

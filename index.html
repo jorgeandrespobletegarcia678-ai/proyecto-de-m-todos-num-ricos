@@ -10,7 +10,7 @@
 
     <!-- Barra de Navegación -->
     <nav class="navbar">
-        <div class="logo">NuméricosApp</div>
+        <div class="logo">MatHApp</div>
         <ul class="nav-links">
             <li><a href="#" class="nav-btn active" data-target="inicio">Inicio</a></li>
             <li><a href="#" class="nav-btn" data-target="calculadora">Calculadora</a></li>
@@ -30,7 +30,21 @@
             </p>
             <div class="video-container">
                 <h3>Video de Presentación</h3>
-                <iframe width="560" height="315" src="https://youtube.com" frameborder="0" allowfullscreen></iframe>
+                <video controls width="640" height="360">
+                <source src="fotos-de-ejercicios/Cerrado.mp4" type="video/mp4">
+                Tu navegador no soporta la reproducción de video.
+                </video>
+                <h3>Video de Presentación</h3>
+                <video controls width="640" height="360">
+                <source src="fotos-de-ejercicios/PuntoMedio.mp4" type="video/mp4">
+                Tu navegador no soporta la reproducción de video.
+                </video>
+                <h3>Video de Presentación</h3>
+                <video controls width="640" height="360">
+                <source src="fotos-de-ejercicios/Newton.mp4" type="video/mp4">
+                Tu navegador no soporta la reproducción de video.
+                </video>
+
             </div>
         </section>
 
@@ -79,9 +93,18 @@
             <h2>Trabajos de Clase: Ejercicios Prácticos</h2>
             <p>Los siguientes problemas han sido precargados de forma automática empleando el mismo motor matemático unificado:</p>
             
-            <div class="ejercicio-automatico" data-id="1" data-nombre="Tarea 1: Análisis de Fluidos" data-metodo="biseccion" data-ecuacion="x^3 - x - 2" data-a="1" data-b="2" data-tol="0.001" data-iter="25"></div>
-            <div class="ejercicio-automatico" data-id="2" data-nombre="Tarea 2: Despeje Alternativo g(x)" data-metodo="punto_fijo" data-ecuacion="sqrt(x + 2)" data-a="1" data-tol="0.001" data-iter="30"></div>
-            <div class="ejercicio-automatico" data-id="3" data-nombre="Tarea 3: Optimización Estructural" data-metodo="newton" data-ecuacion="x^2 - 4" data-a="3" data-tol="0.0001" data-iter="15"></div>
+            <div class="ejercicio-automatico" data-id="0" data-nombre="Tarea 0:" data-metodo="biseccion" data-ecuacion="x^2-x-1" data-a="0" data-b="2" data-tol="0.008" data-iter="25"></div>
+            <div class="ejercicio-automatico" data-id="1" data-nombre="Tarea 1:" data-metodo="biseccion" data-ecuacion="x^2-5" data-a="0" data-b="3" data-tol="0.0625" data-iter="25"></div>
+            <div class="ejercicio-automatico" data-id="2" data-nombre="Tarea 2:" data-metodo="biseccion" data-ecuacion="cos(0.5*e^(-x))+x^2-2" data-a="-1.9" data-b="-1.7" data-tol="0.007" data-iter="30"></div>
+            <div class="ejercicio-automatico" data-id="3" data-nombre="Tarea 3:" data-metodo="biseccion" data-ecuacion="e^(3x)-4" data-a="0" data-b="1" data-tol="0.001" data-iter="25"></div>
+            <div class="ejercicio-automatico" data-id="4" data-nombre="Tarea 4:" data-metodo="biseccion" data-ecuacion="x^2-78.8" data-a="6" data-b="12" data-tol="0.001" data-iter="25"></div>
+            <div class="ejercicio-automatico" data-id="9" data-nombre="tarea 10" data-metodo="newton" data-ecuacion="x^3-6x" data-a="5" data-tol="0.001" data-iter="15"></div>
+            <div class="ejercicio-automatico" data-id="10" data-nombre="tarea 10" data-metodo="newton" data-ecuacion="x^3-6x" data-a="-5" data-tol="0.001" data-iter="15"></div>
+            <div class="ejercicio-automatico" data-id="11" data-nombre="tarea 10" data-metodo="newton" data-ecuacion="x^3-6x" data-a="1" data-tol="0.001" data-iter="15"></div>
+            <div class="ejercicio-automatico" data-id="12" data-nombre="Tarea 11:" data-metodo="punto_fijo" data-ecuacion="Sin(x^(1/2))" data-a="0.5" data-tol="0.001" data-iter="15"></div>
+            <div class="ejercicio-automatico" data-id="13" data-nombre="tarea 12:" data-metodo="newton" data-ecuacion="x^5-x^4+2x^3+x-4" data-a="1.5" data-tol="0.001" data-iter="20"></div>
+            <div class="ejercicio-automatico" data-id="14" data-nombre="tarea 13" data-metodo="newton" data-ecuacion="2x*cos(2x)-((x-2)^2)" data-a="1" data-tol="0.001" data-iter="30"></div>
+            <div class="ejercicio-automatico" data-id="16" data-nombre="tarea 13" data-metodo="newton" data-ecuacion="2x*cos(2x)-((x-2)^2)" data-a="4" data-tol="0.000001" data-iter="30"></div>
         </section>
 
     </main>

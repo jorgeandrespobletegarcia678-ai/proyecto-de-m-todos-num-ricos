@@ -1,3 +1,4 @@
+// SI TIENES ESTO EN LA LÍNEA 1, ELIMÍNALO COMPLETAMENTE:
 // =========================================================================
 // 1. MOTORES MATEMÁTICOS NATIVOS E INTÉRPRETE
 // =========================================================================
@@ -6,7 +7,9 @@ function evaluarFuncion(expresion, xValor) {
     let str = expresion.toLowerCase().replace(/\s+/g, '');
     
     // Esto convierte "2e" en "2*e", "2x" en "2*x", "5(" en "5*(", etc.
-    str = str.replace(/(\d+)([a-z\(])/g, '\$1*\$2');     str = str.replace(/(\))(\()/g, '\$1*\$2');     str = str.replace(/(\))([a-z])/g, '\$1*\$2');
+    str = str.replace(/(\d+)([a-z\(])/g, '\$1*\$2');     
+    str = str.replace(/(\))(\()/g, '\$1*\$2');     
+    str = str.replace(/(\))([a-z])/g, '\$1*\$2');
 
     // 3. Traducimos el número de Euler elevado a una potencia de forma 
     // Maneja tanto e^x como e^(x^2) reemplazando por la función exponencial nativa
@@ -29,7 +32,9 @@ function evaluarFuncion(expresion, xValor) {
     str = str.replace(/tanh\(/g, 'Math.tanh(');
     
     // 5. Esto remplaza todos los '^' restantes por el operador de potencia nativo '**'
+// 5. Esto reemplaza todos los '^' restantes por el operador de potencia
     str = str.replace(/\^/g, '**');
+    str = str.replace(/(^|[\+\-\*\/\(])-x/g, '$1(-1)*x'); // Asegura que 'x' esté precedido por un operador o paréntesis
     
     // 6. Ejecutamos la función sobre el valor x asignado
     const fn = new Function('x', `return ${str};`);
@@ -46,7 +51,7 @@ function calcularDerivadaNumerica(ecuacion, xValor) {
     return (fx_mas_h - fx_menos_h) / (2 * h);
 }
 
-function ejecutarBisecciónMatematica(ecuacion, a, b, tol, maxIter) {
+function ejecutarBiseccionMatematica(ecuacion, a, b, tol, maxIter) {
     let historial = [];
     let fa = evaluarFuncion(ecuacion, a);
     let fb = evaluarFuncion(ecuacion, b);
@@ -121,6 +126,115 @@ function ejecutarNewtonMatematico(ecuacion, x0, tol, maxIter) {
     }
     return { raiz: x_actual, iteraciones: iter, historial };
 }
+// Factorial auxiliar para Taylor
+function calcularFactorial(num) {
+    if (num <= 1) return 1;
+    let result = 1;
+    for (let i = 2; i <= num; i++) result *= i;
+    return result;
+}
+
+// Derivadas de orden superior numéricas
+function calcularDerivadaOrdenN(ecuacion, xValor, orden) {
+    const h = 0.01; 
+    if (orden === 0) return evaluarFuncion(ecuacion, xValor);
+    if (orden === 1) {
+        return (evaluarFuncion(ecuacion, xValor + h) - evaluarFuncion(ecuacion, xValor - h)) / (2 * h);
+    }
+    return (calcularDerivadaOrdenN(ecuacion, xValor + h, orden - 1) - calcularDerivadaOrdenN(ecuacion, xValor - h, orden - 1)) / (2 * h);
+}
+
+// Algoritmo del Polinomio de Taylor
+function ejecutarTaylorMatematico(ecuacion, centro, grado) {
+    let historial = [];
+    let expresionPolinomio = "";
+
+    for (let i = 0; i <= grado; i++) {
+        let derivada = calcularDerivadaOrdenN(ecuacion, centro, i);
+        let factorial = calcularFactorial(i);
+        let coeficiente = derivada / factorial;
+
+        historial.push({ i: i, termino: `f^(${i})`, valorDerivada: derivada, coef: coeficiente });
+
+        if (Math.abs(coeficiente) > 0.00001) {
+            let terminoStr = `${coeficiente.toFixed(4)} * (x - ${centro})^${i}`;
+            if (expresionPolinomio === "") {
+                expresionPolinomio = terminoStr;
+            } else {
+                expresionPolinomio += (coeficiente >= 0 ? " + " : " ") + terminoStr;
+            }
+        }
+    }
+    return { historial, polinomioEcuacion: expresionPolinomio };
+}
+// =========================================================================
+// MOTORES DE LAGRANGE Y SIMPSON 1/3
+// =========================================================================
+function ejecutarLagrangeMatematico(ptsX, ptsY, xBuscar) {
+    let resultado = 0;
+    let n = ptsX.length;
+    let historial = [];
+    let terminosPolinomio = [];
+
+    for (let i = 0; i < n; i++) {
+        let li = 1;
+        let numStr = [];
+        let den = 1;
+        for (let j = 0; j < n; j++) {
+            if (i !== j) {
+                li *= (xBuscar - ptsX[j]) / (ptsX[i] - ptsX[j]);
+                numStr.push(`(x - (${ptsX[j]}))`);
+                den *= (ptsX[i] - ptsX[j]);
+            }
+        }
+        let coef = ptsY[i] / den;
+        terminosPolinomio.push(`(${coef}) * ${numStr.join(' * ')}`);
+        let aporte = li * ptsY[i];
+        resultado += aporte;
+        historial.push({ i: i, x: ptsX[i], y: ptsY[i], li: li, aporte: aporte });
+    }
+    const polinomioEcuacion = terminosPolinomio.join(' + ');
+    return { resultado, historial, polinomioEcuacion };
+}
+
+
+function evaluarPuntoSimpson(ecuacionStr, xVal) {
+    if (typeof math !== 'undefined') {
+        return math.evaluate(ecuacionStr, { x: xVal, e: Math.E, pi: Math.PI });
+    }
+    let expr = ecuacionStr
+        .replace(/\^/g, '**')
+        .replace(/-x\*\*([0-9.]+)/g, '-(x**$1)')
+        .replace(/\bln\(/g, 'Math.log(')
+        .replace(/\bsin\(/g, 'Math.sin(')
+        .replace(/\bcos\(/g, 'Math.cos(')
+        .replace(/\bsqrt\(/g, 'Math.sqrt(')
+        .replace(/\be\b/g, 'Math.E');
+    return Function('x', `return ${expr};`)(xVal);
+}
+
+
+function ejecutarSimpson13Matematico(ecuacionStr, a, b, n) {
+    const h = (b - a) / n;
+    let suma = 0;
+    let historial = [];
+
+    for (let i = 0; i <= n; i++) {
+        let xi = a + i * h;
+        let fxi = evaluarPuntoSimpson(ecuacionStr, xi);
+        let coef = (i === 0 || i === n) ? 1 : (i % 2 === 1 ? 4 : 2);
+        let termino = coef * fxi;
+        suma += termino;
+        historial.push({ i: i, x: xi, fx: fxi, coef: coef, termino: termino });
+    }
+
+    const integral = (h / 3) * suma;
+    return { integral, h, historial };
+}
+
+
+
+
 
 function generarTablaHTML(historial, tol, headers) {
     let tabla = `<table class="tabla-pasos"><thead><tr>`;
@@ -162,6 +276,143 @@ navButtons.forEach(button => {
         }
     });
 });
+function graficarFuncionEnCanvas(ecuacion, raizCalculada, idCanvas = 'graficoCanvas') {
+    const canvas = document.getElementById(idCanvas);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Limpiar canvas anterior
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 🧠 NUEVO: CONFIGURACIÓN DE LÍMITES DINÁMICOS (ESCALA INTELIGENTE)
+    // Centramos el gráfico alrededor de la raíz encontrada para que NUNCA se salga de la pantalla
+    let centroX = isNaN(raizCalculada) || !isFinite(raizCalculada) ? 0 : raizCalculada;
+    
+    // Le damos un margen de 5 unidades a la izquierda y 5 a la derecha
+    const xMin = centroX - 5;
+    const xMax = centroX + 5;
+    
+    // Para el eje Y, calculamos algunos puntos para ver qué tan alta es la función
+    let yMin = -6;
+    let yMax = 6;
+    try {
+        let val1 = evaluarFuncion(ecuacion, centroX - 2);
+        let val2 = evaluarFuncion(ecuacion, centroX + 2);
+        if (!isNaN(val1) && isFinite(val1) && !isNaN(val2) && isFinite(val2)) {
+            // Ajustamos el techo y el piso del gráfico dinámicamente si los valores son muy altos
+            yMax = Math.max(6, Math.abs(val1), Math.abs(val2));
+            yMin = -yMax;
+        }
+    } catch(e) {}
+    
+    // Funciones de conversión de coordenadas matemáticas a píxeles del lienzo
+    const toPixelX = (x) => ((x - xMin) / (xMax - xMin)) * canvas.width;
+    const toPixelY = (y) => canvas.height - ((y - yMin) / (yMax - yMin)) * canvas.height;
+    
+    // 1. DIBUJAR CUADRÍCULA DE FONDO (Paso adaptativo para que no se amontone)
+    ctx.strokeStyle = '#f1f2f6';
+    ctx.lineWidth = 1;
+    let paso = Math.ceil((xMax - xMin) / 10) || 1;
+    
+    for (let x = Math.floor(xMin); x <= Math.ceil(xMax); x += paso) {
+        ctx.beginPath();
+        ctx.moveTo(toPixelX(x), 0);
+        ctx.lineTo(toPixelX(x), canvas.height);
+        ctx.stroke();
+    }
+    
+    let pasoY = Math.ceil((yMax - yMin) / 10) || 1;
+    for (let y = Math.floor(yMin); y <= Math.ceil(yMax); y += pasoY) {
+        ctx.beginPath();
+        ctx.moveTo(0, toPixelY(y));
+        ctx.lineTo(canvas.width, toPixelY(y));
+        ctx.stroke();
+    }
+    
+    // OBTENER COORDENADAS DEL ORIGEN (0,0) - Limitadas para que el eje se quede en la orilla si el origen queda fuera
+    const origX = Math.max(0, Math.min(canvas.width, toPixelX(0)));
+    const origY = Math.max(0, Math.min(canvas.height, toPixelY(0)));
+    
+    // 2. DIBUJAR EJES PRINCIPALES (X e Y)
+    ctx.strokeStyle = '#718093';
+    ctx.lineWidth = 2;
+    
+    // Eje X
+    ctx.beginPath();
+    ctx.moveTo(0, origY);
+    ctx.lineTo(canvas.width, origY);
+    ctx.stroke();
+    
+    // Eje Y
+    ctx.beginPath();
+    ctx.moveTo(origX, 0);
+    ctx.lineTo(origX, canvas.height);
+    ctx.stroke();
+    
+    // 3. COLOCAR NÚMEROS EN LOS EJES
+    ctx.fillStyle = '#2f3640';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    
+    // Números en el Eje X
+    for (let x = Math.floor(xMin); x <= Math.ceil(xMax); x += paso) {
+        if (x !== 0 && toPixelX(x) > 0 && toPixelX(x) < canvas.width) {
+            ctx.fillText(x.toString(), toPixelX(x), origY + 5);
+        }
+    }
+    
+    // Números en el Eje Y
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let y = Math.floor(yMin); y <= Math.ceil(yMax); y += pasoY) {
+        if (y !== 0 && toPixelY(y) > 0 && toPixelY(y) < canvas.height) {
+            ctx.fillText(y.toString(), origX - 5, toPixelY(y));
+        }
+    }
+    
+    // 4. DIBUJAR LA CURVA DE LA FUNCIÓN
+    ctx.strokeStyle = '#2980b9';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    
+    let primero = true;
+    for (let pixelX = 0; pixelX <= canvas.width; pixelX++) {
+        const x = xMin + (pixelX / canvas.width) * (xMax - xMin);
+        let y;
+        try {
+            y = evaluarFuncion(ecuacion, x);
+        } catch(e) { continue; }
+        
+        if (!isNaN(y) && isFinite(y)) {
+            const pixelY = toPixelY(y);
+            if (primero) {
+                ctx.moveTo(pixelX, pixelY);
+                primero = false;
+            } else {
+                ctx.lineTo(pixelX, pixelY);
+            }
+        }
+    }
+    ctx.stroke();
+    
+    // 5. MARCAR LA RAÍZ CON EL PUNTO ROJO
+    if (!isNaN(raizCalculada) && isFinite(raizCalculada)) {
+        const px = toPixelX(raizCalculada);
+        const py = toPixelY(0);
+        
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(` Raíz: ${raizCalculada.toFixed(4)}`, px + 8, py - 15);
+    }
+}
+
 
 // --- LÓGICA DE LA CALCULADORA LIBRE ---
 const selectMetodo = document.getElementById('calcMetodo');
@@ -169,14 +420,38 @@ const labelInputA = document.getElementById('labelInputA');
 const containerInputB = document.getElementById('containerInputB');
 
 selectMetodo?.addEventListener('change', () => {
+    const contenedorA = document.getElementById('calcInputA')?.parentElement || document.getElementById('inputA')?.parentElement;
+    const contenedorB = document.getElementById('containerInputB');
+    const contenedorTaylor = document.getElementById('containerGradoTaylor');
+    const divLagrange = document.getElementById('campos-lagrange');
+    const divSimpson = document.getElementById('campos-simpson');
+
     if (selectMetodo.value === 'biseccion') {
         labelInputA.innerText = "Intervalo A (Inferior):";
-        if (containerInputB) containerInputB.style.display = 'block';
+        if (contenedorA) contenedorA.style.display = 'block';
+        if (contenedorB) contenedorB.style.display = 'block';
+        if (contenedorTaylor) contenedorTaylor.style.display = 'none';
+    } else if (selectMetodo.value === 'taylor') {
+        labelInputA.innerText = "Centro de aproximación (a):";
+        if (contenedorA) contenedorA.style.display = 'block';
+        if (contenedorB) contenedorB.style.display = 'none';
+        if (contenedorTaylor) contenedorTaylor.style.display = 'block';
+    } else if (selectMetodo.value === 'lagrange' || selectMetodo.value === 'simpson13') {
+        if (contenedorA) contenedorA.style.display = 'none';
+        if (contenedorB) contenedorB.style.display = 'none';
+        if (contenedorTaylor) contenedorTaylor.style.display = 'none';
     } else {
         labelInputA.innerText = "Valor Inicial (X0):";
-        if (containerInputB) containerInputB.style.display = 'none';
+        if (contenedorA) contenedorA.style.display = 'block';
+        if (contenedorB) contenedorB.style.display = 'none';
+        if (contenedorTaylor) contenedorTaylor.style.display = 'none';
     }
+
+    if (divLagrange) divLagrange.style.display = (selectMetodo.value === 'lagrange') ? 'block' : 'none';
+    if (divSimpson) divSimpson.style.display = (selectMetodo.value === 'simpson13') ? 'block' : 'none';
 });
+
+
 
 document.getElementById('btnCalcular')?.addEventListener('click', () => {
     const metodo = selectMetodo.value;
@@ -186,6 +461,8 @@ document.getElementById('btnCalcular')?.addEventListener('click', () => {
     const tol = parseFloat(document.getElementById('inputTol').value);
     const maxIter = parseInt(document.getElementById('inputIter').value) || 50;
     const resultBox = document.getElementById('resultadoCalc');
+    const inputGrado = document.getElementById('inputGradoTaylor');
+    const gradoTaylor = inputGrado ? parseInt(inputGrado.value) || 3 : 3;
 
     let res;
     let headers = [];
@@ -199,7 +476,7 @@ document.getElementById('btnCalcular')?.addEventListener('click', () => {
     }
 
     if (metodo === 'biseccion') {
-        res = ejecutarBisecciónMatematica(ecuacion, a, b, tol, maxIter);
+        res = ejecutarBiseccionMatematica(ecuacion, a, b, tol, maxIter);
         headers = ["Iteración (n)", "Punto Medio (c)", "f(c)", "Error Absoluto"];
     } else if (metodo === 'punto_fijo') {
         res = ejecutarPuntoFijoMatematico(ecuacion, a, tol, maxIter);
@@ -207,69 +484,250 @@ document.getElementById('btnCalcular')?.addEventListener('click', () => {
     } else if (metodo === 'newton') {
         res = ejecutarNewtonMatematico(ecuacion, a, tol, maxIter);
         headers = ["Iteración (n)", "x_n", "f(x_n)", "Error Absoluto"];
+    }else if (metodo === 'taylor') {
+        const resTaylor = ejecutarTaylorMatematico(ecuacion, a, gradoTaylor);
+        let tabla = `<table class="tabla-pasos"><thead><tr><th>Grado (n)</th><th>Derivada f^(n)(a)</th><th>Coeficiente c_n</th></tr></thead><tbody>`;
+        resTaylor.historial.forEach(p => {
+            tabla += `<tr><td style="font-weight:bold;">${p.i}</td><td>${p.valorDerivada.toFixed(5)}</td><td>${p.coef.toFixed(5)}</td></tr>`;
+        });
+        tabla += `</tbody></table>`;
+        
+        resultBox.innerHTML = tabla + `<div class="alerta-final" style="font-size:0.85rem; word-break: break-all;"><strong>Polinomio aproximado:</strong> P(x) = ${resTaylor.polinomioEcuacion}</div>`;
+        const boxGrafico = document.getElementById('contenedorGrafico');
+        if (boxGrafico) {
+            boxGrafico.style.display = 'block';
+            graficarFuncionEnCanvas(resTaylor.polinomioEcuacion, a, 'graficoCanvas');
+        }
+
+        
+        // 🛑 NUEVA LÍNEA: EL FRENO DE MANO PARA TAYLOR
+        return; 
+        } else if (metodo === 'lagrange') {
+        const ptsX = document.getElementById('calc-ptsX').value.split(',').map(Number);
+        const ptsY = document.getElementById('calc-ptsY').value.split(',').map(Number);
+        const xBuscar = parseFloat(document.getElementById('calc-xBuscar').value);
+
+        if (ptsX.length !== ptsY.length || ptsX.some(isNaN) || ptsY.some(isNaN) || isNaN(xBuscar)) {
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = `<p class="text-danger"><strong>Error:</strong> Ingresa la misma cantidad de puntos X y Y separados por coma (ej: 1, 2, 4).</p>`;
+            return;
+        }
+
+        const resLag = ejecutarLagrangeMatematico(ptsX, ptsY, xBuscar);
+        let tabla = `<table class="tabla-pasos"><thead><tr><th>i</th><th>x<sub>i</sub></th><th>y<sub>i</sub></th><th>L<sub>i</sub>(${xBuscar})</th><th>y<sub>i</sub> · L<sub>i</sub></th></tr></thead><tbody>`;
+        resLag.historial.forEach(p => {
+            tabla += `<tr><td>${p.i}</td><td>${p.x}</td><td>${p.y}</td><td>${p.li.toFixed(6)}</td><td>${p.aporte.toFixed(6)}</td></tr>`;
+        });
+        tabla += `</tbody></table>`;
+
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = tabla + `<div class="alerta-final"><strong>Resultado Interpolado P(${xBuscar}):</strong> ${resLag.resultado.toFixed(6)}</div>`;
+
+        const boxGrafico = document.getElementById('contenedorGrafico');
+        if (boxGrafico) {
+            boxGrafico.style.display = 'block';
+            graficarFuncionEnCanvas(resLag.polinomioEcuacion, xBuscar, 'graficoCanvas');
+        }
+        return;
+
+    } else if (metodo === 'simpson13') {
+        const aSimp = parseFloat(document.getElementById('calc-simp-a').value);
+        const bSimp = parseFloat(document.getElementById('calc-simp-b').value);
+        const nSimp = parseInt(document.getElementById('calc-simp-n').value);
+
+        if (isNaN(aSimp) || isNaN(bSimp) || isNaN(nSimp) || nSimp <= 0 || nSimp % 2 !== 0) {
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = `<p class="text-danger"><strong>Error:</strong> En Simpson 1/3 el número de subintervalos (n) debe ser entero positivo y PAR (ej: 2, 4, 6, 8).</p>`;
+            return;
+        }
+
+        const resSimp = ejecutarSimpson13Matematico(ecuacion, aSimp, bSimp, nSimp);
+        let tabla = `<p><strong>Ancho de paso (h):</strong> ${resSimp.h.toFixed(6)}</p><table class="tabla-pasos"><thead><tr><th>i</th><th>x<sub>i</sub></th><th>f(x<sub>i</sub>)</th><th>Coef.</th><th>Coef · f(x<sub>i</sub>)</th></tr></thead><tbody>`;
+        resSimp.historial.forEach(p => {
+            tabla += `<tr><td>${p.i}</td><td>${p.x.toFixed(4)}</td><td>${p.fx.toFixed(6)}</td><td>${p.coef}</td><td>${p.termino.toFixed(6)}</td></tr>`;
+        });
+        tabla += `</tbody></table>`;
+
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = tabla + `<div class="alerta-final"><strong>Integral Aproximada I:</strong> ${resSimp.integral.toFixed(6)}</div>`;
+
+        const boxGrafico = document.getElementById('contenedorGrafico');
+        if (boxGrafico) {
+            boxGrafico.style.display = 'block';
+            graficarFuncionEnCanvas(ecuacion, (aSimp + bSimp) / 2, 'graficoCanvas');
+        }
+        return;
     }
 
+    
+    
     if (res.errorIntervalo) {
         resultBox.innerHTML = `<p class="text-danger"><strong>Error de Intervalo:</strong> f(a) y f(b) deben tener signos opuestos en bisección.</p>`;
     } else if (res.errorDerivada) {
         resultBox.innerHTML = `<p class="text-danger"><strong>Error Numérico:</strong> La derivada se hizo cero.</p>`;
-    } else {
-        resultBox.innerHTML = generarTablaHTML(res.historial, tol, headers) + 
-            `<div class="alerta-final"><strong>Raíz aproximada:</strong> ${res.raiz.toFixed(6)} encontrado en ${res.iteraciones} iteraciones.</div>`;
-    }
+        } else {
+            resultBox.innerHTML = generarTablaHTML(res.historial, tol, headers) + 
+                `<div class="alerta-final"><strong>Raíz aproximada:</strong> ${res.raiz.toFixed(6)} encontrado en ${res.iteraciones} iteraciones.</div>`;
+            
+            // CONEXIÓN CON EL CANVAS GRÁFICO
+            const boxGrafico = document.getElementById('contenedorGrafico');
+            if (boxGrafico) {
+                boxGrafico.style.display = 'block';
+                let ecGrafica = ecuacion;
+                if (metodo === 'punto_fijo') {
+                    ecGrafica = `${ecuacion} - x`; // Ajuste g(x) - x = 0
+                }
+                graficarFuncionEnCanvas(ecGrafica, res.raiz);
+            }
+        }
     resultBox.style.display = 'block';
 });
 
 // --- RENDERIZACIÓN AUTOMÁTICA DE TRABAJOS DE CLASE ---
 const bloquesEjercicios = document.querySelectorAll('.ejercicio-automatico');
 
-bloquesEjercicios.forEach(bloque => {
-    const id = bloque.getAttribute('data-id');
-    const nombre = bloque.getAttribute('data-nombre');
-    const metodo = bloque.getAttribute('data-metodo');
-    const ecuacion = bloque.getAttribute('data-ecuacion');
-    const a = parseFloat(bloque.getAttribute('data-a'));
-    const b = parseFloat(bloque.getAttribute('data-b')) || 0;
-    const tol = parseFloat(bloque.getAttribute('data-tol'));
-    const maxIter = parseInt(bloque.getAttribute('data-iter')) || 40;
+function cargarTareasDesdeArchivo() {
+    const contenedorLista = document.getElementById('contenedorListaTareas');
+    if (!contenedorLista) return;
 
-    bloque.innerHTML = `
-        <div class="ejercicio-box">
-            <h3>${nombre} <span style="font-size:0.85rem; color:#7f8c8d; background:#e2e8f0; padding:2px 6px; border-radius:4px;">${metodo.toUpperCase()}</span></h3>
-            <p><strong>Función:</strong> <code>${ecuacion}</code></p>
-            <p><strong>Datos:</strong> X0/A = ${a} ${metodo === 'biseccion' ? '| B = ' + b : ''} | Tol = ${tol}</p>
-            <button class="btn-ejercicio" data-btn-id="${id}">Resolver Trabajo</button>
-            <div id="resultado-ejercicio-${id}" class="tabla-contenedor"></div>
-        </div>
-    `;
+    const tareasAMapear = typeof LISTA_TAREAS !== 'undefined' ? LISTA_TAREAS : [];
+    contenedorLista.innerHTML = "";
 
-    bloque.querySelector(`[data-btn-id="${id}"]`).addEventListener('click', () => {
-        const contenedor = document.getElementById(`resultado-ejercicio-${id}`);
-        let res;
-        let headers = [];
+    tareasAMapear.forEach(tarea => {
+        const divTarea = document.createElement('div');
+        divTarea.className = 'ejercicio-box';
+        divTarea.style.marginBottom = '1.5rem';
 
-        try {
-            if (metodo === 'biseccion') {
-                res = ejecutarBisecciónMatematica(ecuacion, a, b, tol, maxIter);
-                headers = ["Iteración (n)", "Punto Medio (c)", "f(c)", "Error Absoluto"];
-            } else if (metodo === 'punto_fijo') {
-                res = ejecutarPuntoFijoMatematico(ecuacion, a, tol, maxIter);
-                headers = ["Iteración (n)", "x_n", "g(x_n)", "Error Absoluto"];
-            } else if (metodo === 'newton') {
-                res = ejecutarNewtonMatematico(ecuacion, a, tol, maxIter);
-                headers = ["Iteración (n)", "x_n", "f(x_n)", "Error Absoluto"];
-            }
+        divTarea.innerHTML = `
+            <h3>${tarea.nombre} <span style="font-size:0.85rem; color:#ffffff; background:#3498db; padding:2px 6px; border-radius:4px;">${tarea.metodo.toUpperCase()}</span></h3>
+            <p><strong>Función Base:</strong> <code>${tarea.ecuacion}</code></p>
+            <p id="detalles-tarea-${tarea.id}"></p>
+            <button class="btn-ejercicio" id="btn-tarea-${tarea.id}">Resolver Trabajo</button>
+            <div id="resultado-ejercicio-${tarea.id}" class="tabla-contenedor"></div>
+        `;
 
-            if (res.errorIntervalo) {
-                contenedor.innerHTML = `<p class="text-danger">Error: Intervalo inválido.</p>`;
-            } else if (res.errorDerivada) {
-                contenedor.innerHTML = `<p class="text-danger">Error: Derivada cero.</p>`;
+        contenedorLista.appendChild(divTarea);
+
+        const pDetalles = document.getElementById(`detalles-tarea-${tarea.id}`);
+               if (pDetalles) {
+            if (tarea.metodo === 'taylor') {
+                pDetalles.innerHTML = `<strong>Configuración:</strong> Centro (a) = ${tarea.centro} | Grado (n) = ${tarea.grado}`;
+            } else if (tarea.metodo === 'lagrange') {
+                pDetalles.innerHTML = `<strong>Puntos X:</strong> [${tarea.ptsX.join(', ')}] | <strong>Evaluar en x =</strong> ${tarea.xBuscar}`;
+            } else if (tarea.metodo === 'simpson13') {
+                pDetalles.innerHTML = `<strong>Configuración:</strong> Intervalo [${tarea.a}, ${tarea.b}] | Subintervalos (n) = ${tarea.n}`;
             } else {
-                contenedor.innerHTML = generarTablaHTML(res.historial, tol, headers) + 
-                    `<div class="alerta-final"><strong>Resultado:</strong> Raíz ${res.raiz.toFixed(6)} en ${res.iteraciones} pasos.</div>`;
+                pDetalles.innerHTML = `<strong>Configuración:</strong> X0/A = ${tarea.a} ${tarea.b ? '| B = ' + tarea.b : ''} | Tol = ${tarea.tol}`;
             }
-        } catch (error) {
-            contenedor.innerHTML = `<p class="text-danger">Error al evaluar el ejercicio.</p>`;
+        }
+
+        const contenedorRes = document.getElementById(`resultado-ejercicio-${tarea.id}`);
+
+
+        const botonResolver = document.getElementById(`btn-tarea-${tarea.id}`);
+        if (botonResolver) {
+        botonResolver.addEventListener('click', () => {
+            try {
+                if (tarea.metodo === 'taylor') {
+                    const resTaylor = ejecutarTaylorMatematico(tarea.ecuacion, tarea.centro, tarea.grado);
+                    let tabla = `<table class="tabla-pasos"><thead><tr><th>Grado (n)</th><th>Derivada f^(n)(a)</th><th>Coeficiente c_n</th></tr></thead><tbody>`;
+                    resTaylor.historial.forEach(p => {
+                        tabla += `<tr><td style="font-weight:bold;">${p.i}</td><td>${p.valorDerivada.toFixed(5)}</td><td>${p.coef.toFixed(5)}</td></tr>`;
+                    });
+                    tabla += `</tbody></table>`;
+                    contenedorRes.innerHTML = tabla + `<div class="alerta-final" style="font-size:0.85rem; word-break: break-all;"><strong>Polinomio aproximado:</strong><br>P(x) = ${resTaylor.polinomioEcuacion}</div>`;
+                    renderizarGraficaTarea(resTaylor.polinomioEcuacion, tarea.centro);
+
+                } else if (tarea.metodo === 'lagrange') {
+                    const resLag = ejecutarLagrangeMatematico(tarea.ptsX, tarea.ptsY, tarea.xBuscar);
+                    let tabla = `<table class="tabla-pasos"><thead><tr><th>i</th><th>x<sub>i</sub></th><th>y<sub>i</sub></th><th>L<sub>i</sub>(${tarea.xBuscar})</th><th>y<sub>i</sub> · L<sub>i</sub></th></tr></thead><tbody>`;
+                    resLag.historial.forEach(p => {
+                        tabla += `<tr><td>${p.i}</td><td>${p.x}</td><td>${p.y}</td><td>${p.li.toFixed(6)}</td><td>${p.aporte.toFixed(6)}</td></tr>`;
+                    });
+                    tabla += `</tbody></table>`;
+                    contenedorRes.innerHTML = tabla + `<div class="alerta-final"><strong>Resultado Interpolado P(${tarea.xBuscar}):</strong> ${resLag.resultado.toFixed(6)}</div>`;
+                    renderizarGraficaTarea(resLag.polinomioEcuacion, tarea.xBuscar);
+
+                } else if (tarea.metodo === 'simpson13') {
+                    const resSimp = ejecutarSimpson13Matematico(tarea.ecuacion, tarea.a, tarea.b, tarea.n);
+                    let tabla = `<p><strong>Ancho de paso (h):</strong> ${resSimp.h.toFixed(6)}</p><table class="tabla-pasos"><thead><tr><th>i</th><th>x<sub>i</sub></th><th>f(x<sub>i</sub>)</th><th>Coef.</th><th>Coef · f(x<sub>i</sub>)</th></tr></thead><tbody>`;
+                    resSimp.historial.forEach(p => {
+                        tabla += `<tr><td>${p.i}</td><td>${p.x.toFixed(4)}</td><td>${p.fx.toFixed(6)}</td><td>${p.coef}</td><td>${p.termino.toFixed(6)}</td></tr>`;
+                    });
+                    tabla += `</tbody></table>`;
+                    contenedorRes.innerHTML = tabla + `<div class="alerta-final"><strong>Integral Aproximada I:</strong> ${resSimp.integral.toFixed(6)}</div>`;
+                    renderizarGraficaTarea(tarea.ecuacion, (tarea.a + tarea.b) / 2);
+
+                } else {
+                    let resRaiz;
+                    let headers = [];
+                    if (tarea.metodo === 'biseccion') {
+                        resRaiz = ejecutarBiseccionMatematica(tarea.ecuacion, tarea.a, tarea.b, tarea.tol, tarea.maxIter);
+                        headers = ["Iteración (n)", "Punto Medio (c)", "f(c)", "Error Absoluto"];
+                    } else if (tarea.metodo === 'punto_fijo') {
+                        resRaiz = ejecutarPuntoFijoMatematico(tarea.ecuacion, tarea.a, tarea.tol, tarea.maxIter);
+                        headers = ["Iteración (n)", "x_n", "g(x_n)", "Error Absoluto"];
+                    } else if (tarea.metodo === 'newton') {
+                        resRaiz = ejecutarNewtonMatematico(tarea.ecuacion, tarea.a, tarea.tol, tarea.maxIter);
+                        headers = ["Iteración (n)", "x_n", "f(x_n)", "Error Absoluto"];
+                    }
+
+                    if (resRaiz && (resRaiz.errorIntervalo || resRaiz.errorDerivada)) {
+                        contenedorRes.innerHTML = `<p class="text-danger">Error al ejecutar el método numérico.</p>`;
+                    } else if (resRaiz) {
+                        contenedorRes.innerHTML = generarTablaHTML(resRaiz.historial, tarea.tol, headers) +
+                            `<div class="alerta-final"><strong>Resultado:</strong> Raíz aproximada ${resRaiz.raiz.toFixed(6)}</div>`;
+                        let ecGrafica = tarea.ecuacion;
+                        if (tarea.metodo === 'punto_fijo') ecGrafica = `${tarea.ecuacion} - x`;
+                        renderizarGraficaTarea(ecGrafica, resRaiz.raiz);
+                    }
+                }
+            } catch (err) {
+                console.error("Detalle del error:", err);
+                contenedorRes.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+            }
+        });
+
         }
     });
-});
+}
+
+function renderizarGraficaTarea(ecuacion, puntoMarcado) {
+    const boxGrafico = document.getElementById('contenedorGraficoTarea');
+    if (boxGrafico) {
+        boxGrafico.style.display = 'block';
+        setTimeout(() => {
+            graficarFuncionEnCanvas(ecuacion, puntoMarcado, 'graficoCanvasTarea');
+            boxGrafico.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
+}
+function inicializarModuloTareas() {
+    console.log("=== INICIANDO MÓDULO DE TRABAJOS DE CLASE ===");
+    
+    const contenedor = document.getElementById('contenedorListaTareas');
+    if (!contenedor) {
+        console.warn("⚠️ ALERTA: No se encontró 'contenedorListaTareas' en el HTML.");
+        return;
+    }
+
+    if (typeof LISTA_TAREAS === 'undefined') {
+        console.error("❌ ERROR CRÍTICO: La variable 'LISTA_TAREAS' no existe en memoria.");
+        return;
+    }
+
+    console.log(`✅ ÉXITO: Detectadas ${LISTA_TAREAS.length} tareas listas.`);
+    cargarTareasDesdeArchivo();
+}
+
+// Escuchamos al navegador para arrancar en el momento exacto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarModuloTareas);
+} else {
+    inicializarModuloTareas();
+}
+// EJECUCIÓN DIRECTA E INMEDIATA EN MEMORIA AL LEER EL SCRIPT
+cargarTareasDesdeArchivo();
+
+
+

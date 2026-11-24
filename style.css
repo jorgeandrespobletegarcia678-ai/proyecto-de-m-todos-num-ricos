@@ -283,9 +283,12 @@ button:hover {
         padding: 1.2rem;
     }
 
-    .video-container iframe {
-        width: 100% !important;
-        height: auto;
-        aspect-ratio: 16 / 9;
-    }
+.video-container iframe,
+.video-container video {
+    width: 100% !important;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    display: block;
+}
 }

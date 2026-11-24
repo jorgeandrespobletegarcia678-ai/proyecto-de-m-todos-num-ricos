@@ -276,142 +276,169 @@ navButtons.forEach(button => {
         }
     });
 });
-function graficarFuncionEnCanvas(ecuacion, raizCalculada, idCanvas = 'graficoCanvas') {
-    const canvas = document.getElementById(idCanvas);
+function graficarFuncionEnCanvas(ecuacion, xPunto, canvasId) {
+    const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    
-    // Limpiar canvas anterior
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 🧠 NUEVO: CONFIGURACIÓN DE LÍMITES DINÁMICOS (ESCALA INTELIGENTE)
-    // Centramos el gráfico alrededor de la raíz encontrada para que NUNCA se salga de la pantalla
-    let centroX = isNaN(raizCalculada) || !isFinite(raizCalculada) ? 0 : raizCalculada;
-    
-    // Le damos un margen de 5 unidades a la izquierda y 5 a la derecha
-    const xMin = centroX - 5;
-    const xMax = centroX + 5;
-    
-    // Para el eje Y, calculamos algunos puntos para ver qué tan alta es la función
-    let yMin = -6;
-    let yMax = 6;
-    try {
-        let val1 = evaluarFuncion(ecuacion, centroX - 2);
-        let val2 = evaluarFuncion(ecuacion, centroX + 2);
-        if (!isNaN(val1) && isFinite(val1) && !isNaN(val2) && isFinite(val2)) {
-            // Ajustamos el techo y el piso del gráfico dinámicamente si los valores son muy altos
-            yMax = Math.max(6, Math.abs(val1), Math.abs(val2));
-            yMin = -yMax;
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Evaluador seguro compatible con math.js y expresiones estándar
+    const evalY = (xVal) => {
+        try {
+            if (typeof math !== 'undefined') {
+                return math.evaluate(ecuacion, { x: xVal, e: Math.E, pi: Math.PI });
+            }
+            let expr = ecuacion
+                .replace(/\^/g, '**')
+                .replace(/-x\*\*([0-9.]+)/g, '-(x**$1)')
+                .replace(/\bln\(/g, 'Math.log(')
+                .replace(/\bsin\(/g, 'Math.sin(')
+                .replace(/\bcos\(/g, 'Math.cos(')
+                .replace(/\bsqrt\(/g, 'Math.sqrt(')
+                .replace(/\be\b/g, 'Math.E');
+            return Function('x', `return ${expr};`)(xVal);
+        } catch (e) {
+            return NaN;
         }
-    } catch(e) {}
-    
-    // Funciones de conversión de coordenadas matemáticas a píxeles del lienzo
-    const toPixelX = (x) => ((x - xMin) / (xMax - xMin)) * canvas.width;
-    const toPixelY = (y) => canvas.height - ((y - yMin) / (yMax - yMin)) * canvas.height;
-    
-    // 1. DIBUJAR CUADRÍCULA DE FONDO (Paso adaptativo para que no se amontone)
-    ctx.strokeStyle = '#f1f2f6';
+    };
+
+    // Altura real del punto sobre la curva y = f(x)
+    const yPunto = evalY(xPunto);
+    const esRaiz = Math.abs(yPunto) < 0.01 || isNaN(yPunto);
+    const yObjetivo = esRaiz ? 0 : yPunto;
+
+    // Rango horizontal centrado alrededor de xPunto
+    const xMin = xPunto - 4;
+    const xMax = xPunto + 4;
+    const escalaX = width / (xMax - xMin);
+    const origenX = -xMin * escalaX;
+
+    // Rango vertical ajustado para que siempre quepa el punto y la curva
+    const amplitudY = Math.max(20, Math.abs(yObjetivo) * 1.8);
+    const yMin = Math.min(-5, yObjetivo - amplitudY * 0.5);
+    const yMax = Math.max(15, yObjetivo + amplitudY * 0.8);
+    const escalaY = height / (yMax - yMin);
+    const origenY = yMax * escalaY;
+
+    // 1. Cuadrícula suave
+    ctx.strokeStyle = '#e6e6e6';
     ctx.lineWidth = 1;
-    let paso = Math.ceil((xMax - xMin) / 10) || 1;
-    
-    for (let x = Math.floor(xMin); x <= Math.ceil(xMax); x += paso) {
+    const pasoX = 1;
+    const pasoY = Math.max(1, Math.round((yMax - yMin) / 8));
+
+    for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x += pasoX) {
+        const px = origenX + x * escalaX;
         ctx.beginPath();
-        ctx.moveTo(toPixelX(x), 0);
-        ctx.lineTo(toPixelX(x), canvas.height);
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, height);
         ctx.stroke();
     }
-    
-    let pasoY = Math.ceil((yMax - yMin) / 10) || 1;
-    for (let y = Math.floor(yMin); y <= Math.ceil(yMax); y += pasoY) {
+    for (let y = Math.ceil(yMin); y <= Math.floor(yMax); y += pasoY) {
+        const py = origenY - y * escalaY;
         ctx.beginPath();
-        ctx.moveTo(0, toPixelY(y));
-        ctx.lineTo(canvas.width, toPixelY(y));
+        ctx.moveTo(0, py);
+        ctx.lineTo(width, py);
         ctx.stroke();
     }
-    
-    // OBTENER COORDENADAS DEL ORIGEN (0,0) - Limitadas para que el eje se quede en la orilla si el origen queda fuera
-    const origX = Math.max(0, Math.min(canvas.width, toPixelX(0)));
-    const origY = Math.max(0, Math.min(canvas.height, toPixelY(0)));
-    
-    // 2. DIBUJAR EJES PRINCIPALES (X e Y)
-    ctx.strokeStyle = '#718093';
-    ctx.lineWidth = 2;
-    
-    // Eje X
-    ctx.beginPath();
-    ctx.moveTo(0, origY);
-    ctx.lineTo(canvas.width, origY);
-    ctx.stroke();
-    
-    // Eje Y
-    ctx.beginPath();
-    ctx.moveTo(origX, 0);
-    ctx.lineTo(origX, canvas.height);
-    ctx.stroke();
-    
-    // 3. COLOCAR NÚMEROS EN LOS EJES
-    ctx.fillStyle = '#2f3640';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    
-    // Números en el Eje X
-    for (let x = Math.floor(xMin); x <= Math.ceil(xMax); x += paso) {
-        if (x !== 0 && toPixelX(x) > 0 && toPixelX(x) < canvas.width) {
-            ctx.fillText(x.toString(), toPixelX(x), origY + 5);
-        }
+
+    // 2. Ejes X y Y principales
+    ctx.strokeStyle = '#444444';
+    ctx.lineWidth = 1.5;
+    if (origenY >= 0 && origenY <= height) {
+        ctx.beginPath();
+        ctx.moveTo(0, origenY);
+        ctx.lineTo(width, origenY);
+        ctx.stroke();
     }
-    
-    // Números en el Eje Y
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    for (let y = Math.floor(yMin); y <= Math.ceil(yMax); y += pasoY) {
-        if (y !== 0 && toPixelY(y) > 0 && toPixelY(y) < canvas.height) {
-            ctx.fillText(y.toString(), origX - 5, toPixelY(y));
-        }
+    if (origenX >= 0 && origenX <= width) {
+        ctx.beginPath();
+        ctx.moveTo(origenX, 0);
+        ctx.lineTo(origenX, height);
+        ctx.stroke();
     }
-    
-    // 4. DIBUJAR LA CURVA DE LA FUNCIÓN
-    ctx.strokeStyle = '#2980b9';
+
+    // Etiquetas numéricas en los ejes
+    ctx.fillStyle = '#333333';
+    ctx.font = '11px Segoe UI, sans-serif';
+    for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x += pasoX) {
+        if (x === 0) continue;
+        const px = origenX + x * escalaX;
+        ctx.fillText(x, px - 4, Math.min(height - 5, Math.max(12, origenY + 14)));
+    }
+    for (let y = Math.ceil(yMin); y <= Math.floor(yMax); y += pasoY) {
+        if (y === 0) continue;
+        const py = origenY - y * escalaY;
+        ctx.fillText(y, Math.min(width - 25, Math.max(5, origenX - 22)), py + 4);
+    }
+
+    // 3. Curva azul de la función f(x) o P(x)
+    ctx.strokeStyle = '#1f77b4';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    
-    let primero = true;
-    for (let pixelX = 0; pixelX <= canvas.width; pixelX++) {
-        const x = xMin + (pixelX / canvas.width) * (xMax - xMin);
-        let y;
-        try {
-            y = evaluarFuncion(ecuacion, x);
-        } catch(e) { continue; }
-        
+    let primerPunto = true;
+    for (let px = 0; px <= width; px += 2) {
+        const x = (px - origenX) / escalaX;
+        const y = evalY(x);
         if (!isNaN(y) && isFinite(y)) {
-            const pixelY = toPixelY(y);
-            if (primero) {
-                ctx.moveTo(pixelX, pixelY);
-                primero = false;
+            const py = origenY - y * escalaY;
+            if (py >= -50 && py <= height + 50) {
+                if (primerPunto) {
+                    ctx.moveTo(px, py);
+                    primerPunto = false;
+                } else {
+                    ctx.lineTo(px, py);
+                }
             } else {
-                ctx.lineTo(pixelX, pixelY);
+                primerPunto = true;
             }
+        } else {
+            primerPunto = true;
         }
     }
     ctx.stroke();
-    
-    // 5. MARCAR LA RAÍZ CON EL PUNTO ROJO
-    if (!isNaN(raizCalculada) && isFinite(raizCalculada)) {
-        const px = toPixelX(raizCalculada);
-        const py = toPixelY(0);
-        
-        ctx.fillStyle = '#e74c3c';
+
+    // 4. Punto rojo en (xPunto, yObjetivo) + líneas punteadas si está fuera del eje X
+    const pxPunto = origenX + xPunto * escalaX;
+    const pyPunto = origenY - yObjetivo * escalaY;
+
+    if (!esRaiz) {
+        ctx.save();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 1.5;
+
+        // Línea vertical hacia el eje X
         ctx.beginPath();
-        ctx.arc(px, py, 6, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        ctx.fillStyle = '#2c3e50';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(` Raíz: ${raizCalculada.toFixed(4)}`, px + 8, py - 15);
+        ctx.moveTo(pxPunto, pyPunto);
+        ctx.lineTo(pxPunto, origenY);
+        ctx.stroke();
+
+        // Línea horizontal hacia el eje Y
+        ctx.beginPath();
+        ctx.moveTo(pxPunto, pyPunto);
+        ctx.lineTo(origenX, pyPunto);
+        ctx.stroke();
+        ctx.restore();
     }
+
+    // Círculo rojo
+    ctx.fillStyle = '#e74c3c';
+    ctx.beginPath();
+    ctx.arc(pxPunto, pyPunto, 5.5, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Etiqueta inteligente ("Raíz" vs "Punto interpolado")
+    ctx.fillStyle = '#c0392b';
+    ctx.font = 'bold 12px Segoe UI, sans-serif';
+    const textoEtiqueta = esRaiz
+        ? `Raíz: ${xPunto.toFixed(4)}`
+        : `Punto: (${xPunto.toFixed(2)}, ${yObjetivo.toFixed(4)})`;
+    ctx.fillText(textoEtiqueta, pxPunto + 10, pyPunto - 10);
 }
+
 
 
 // --- LÓGICA DE LA CALCULADORA LIBRE ---
@@ -728,6 +755,3 @@ if (document.readyState === 'loading') {
 }
 // EJECUCIÓN DIRECTA E INMEDIATA EN MEMORIA AL LEER EL SCRIPT
 cargarTareasDesdeArchivo();
-
-
-
